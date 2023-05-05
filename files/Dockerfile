@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.20
 
-FROM golang:${GO_VERSION}-alpine as builder
+FROM golang:${GO_VERSION} as builder
 
 WORKDIR /goapp
 COPY . .
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 \
 
 
 FROM gcr.io/distroless/static
-LABEL maintainer="Andy Pangaribuan <andypangaribuan@treasury.id>"
+LABEL maintainer="Andy Pangaribuan <iam.pangaribuan@gmail.com>"
 
 ENV TZ=Asia/Jakarta
 
