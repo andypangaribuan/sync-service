@@ -1,0 +1,5 @@
+# Dictionary for special name on this project
+ssync
+gofmt
+actenv
+keymutex
