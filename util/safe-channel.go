@@ -9,10 +9,15 @@
 package util
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/andypangaribuan/project9/f9"
 )
+
+const min int64 = 10
+const max int64 = 2000
 
 type SafeChannel struct {
 	CH     *chan string
@@ -25,8 +30,8 @@ func (slf *SafeChannel) Send(val string) {
 		return
 	}
 
-	slf.mtx.TryLock()
-	defer slf.mtx.Unlock()
+	slf.lock()
+	defer slf.unlock()
 
 	if !slf.closed && slf.CH != nil {
 		*slf.CH <- val
@@ -46,11 +51,26 @@ func (slf *SafeChannel) Close() {
 		return
 	}
 
-	slf.mtx.TryLock()
-	defer slf.mtx.Unlock()
+	slf.lock()
+	defer slf.unlock()
 
 	if !slf.closed && slf.CH != nil {
 		slf.closed = true
 		close(*slf.CH)
 	}
+}
+
+func (slf *SafeChannel) lock() {
+	for {
+		if slf.mtx.TryLock() {
+			break
+		}
+
+		x := rand.Int63n(max-min) + min
+		time.Sleep(time.Microsecond * time.Duration(x))
+	}
+}
+
+func (slf *SafeChannel) unlock() {
+	slf.mtx.Unlock()
 }
