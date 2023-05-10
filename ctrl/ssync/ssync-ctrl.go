@@ -9,6 +9,7 @@
 package ssync
 
 import (
+	"fmt"
 	"io"
 
 	"sync-service/abs"
@@ -60,7 +61,17 @@ func (*SyncService) execute(req *sync_svc.KeyLockRequest, id string) *sync_svc.K
 	}
 }
 
-func (slf *SyncService) KeyLock(stream sync_svc.SyncService_KeyLockServer) error {
+func (slf *SyncService) KeyLock(stream sync_svc.SyncService_KeyLockServer) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recover from panic: %+v", r)
+		}
+	}()
+
+	return slf.keyLock(stream)
+}
+
+func (slf *SyncService) keyLock(stream sync_svc.SyncService_KeyLockServer) error {
 	defer func() {
 		util.Printf("KeyLock: done\n")
 	}()
