@@ -8,8 +8,11 @@
 
 package abs
 
-import "sync-service/util"
+import (
+	"sync-service/util"
+	"time"
+)
 
 type Sync interface {
-	Register(key string, callback func() *util.SafeChannel) string
+	Register(timeout time.Duration, key string, callback func() *util.SafeChannel) (id string, executed bool, panicErr error)
 }

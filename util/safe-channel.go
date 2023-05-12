@@ -9,68 +9,117 @@
 package util
 
 import (
-	"math/rand"
-	"sync"
+	"context"
+	"fmt"
 	"time"
 
+	"github.com/andypangaribuan/project9/abs"
 	"github.com/andypangaribuan/project9/f9"
+	"github.com/andypangaribuan/project9/p9"
 )
 
-const min int64 = 10
-const max int64 = 2000
-
 type SafeChannel struct {
-	CH     *chan string
+	ch     *chan string
 	closed bool
-	mtx    sync.Mutex
+	mtx    abs.UtilMutex
+}
+
+func NewSafeChannel(ch *chan string) *SafeChannel {
+	return &SafeChannel{
+		ch:  ch,
+		mtx: p9.Util.NewMutex(),
+	}
 }
 
 func (slf *SafeChannel) Send(val string) {
-	if slf.closed {
+	if slf.closed || slf.ch == nil {
 		return
 	}
 
-	slf.lock()
-	defer slf.unlock()
+	for {
+		executed, panicErr := slf.mtx.Exec(nil, func() {
+			if !slf.closed && slf.ch != nil {
+				*slf.ch <- val
+			}
+		})
 
-	if !slf.closed && slf.CH != nil {
-		*slf.CH <- val
+		if executed || panicErr != nil {
+			break
+		}
 	}
+
+	// slf.mtx.Lock()
+	// defer slf.mtx.Unlock()
+
+	// if !slf.closed && slf.ch != nil {
+	// 	*slf.ch <- val
+	// }
 }
 
-func (slf *SafeChannel) Read(defaultValue ...string) string {
-	if !slf.closed && slf.CH != nil {
-		return <-*slf.CH
+func (slf *SafeChannel) Read(timeout time.Duration, defaultValue ...string) (val string) {
+	if !slf.closed && slf.ch != nil {
+		var panicErr error
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+		go func(ctx context.Context) {
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = fmt.Errorf("panic error: %+v", r)
+				}
+				cancel()
+			}()
+
+			val = <-*slf.ch
+		}(ctx)
+
+		<-ctx.Done()
+		if panicErr != nil {
+			return f9.Ternary(len(defaultValue) == 0, "", defaultValue[0])
+		}
+
+		// switch ctx.Err() {
+		// case context.DeadlineExceeded:
+		// 	isTimeout = true
+		// }
+
+		// val = <-*slf.ch
+		return
 	}
 
 	return f9.Ternary(len(defaultValue) == 0, "", defaultValue[0])
 }
 
 func (slf *SafeChannel) Close() {
-	if slf.closed {
+	if slf.closed || slf.ch == nil {
 		return
 	}
 
-	slf.lock()
-	defer slf.unlock()
+	panicErrCount := 0
 
-	if !slf.closed && slf.CH != nil {
-		slf.closed = true
-		close(*slf.CH)
-	}
-}
-
-func (slf *SafeChannel) lock() {
 	for {
-		if slf.mtx.TryLock() {
+		executed, panicErr := slf.mtx.Exec(nil, func() {
+			slf.closed = true
+			close(*slf.ch)
+		})
+
+		if executed {
 			break
 		}
 
-		x := rand.Int63n(max-min) + min
-		time.Sleep(time.Microsecond * time.Duration(x))
-	}
-}
+		if panicErr != nil {
+			panicErrCount++
+		}
 
-func (slf *SafeChannel) unlock() {
-	slf.mtx.Unlock()
+		if panicErrCount >= 3 {
+			break
+		}
+	}
+
+	// slf.mtx.Lock()
+	// defer slf.mtx.Unlock()
+
+	// if !slf.closed && slf.ch != nil {
+	// 	slf.closed = true
+	// 	close(*slf.ch)
+	// }
 }

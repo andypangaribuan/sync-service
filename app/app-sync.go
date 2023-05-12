@@ -10,23 +10,23 @@ package app
 
 import (
 	"fmt"
-	"sync"
 	"sync-service/util"
 	"time"
 
+	"github.com/andypangaribuan/project9/abs"
 	"github.com/andypangaribuan/project9/f9"
 	"github.com/andypangaribuan/project9/p9"
 )
 
 type srSync struct {
 	channel string
-	mutex   sync.Mutex
+	mtx     abs.UtilMutex
 	pools   map[string]*srPool
 }
 
 type srPool struct {
 	key       string
-	mtx       *sync.RWMutex
+	mtx       abs.UtilMutex
 	isActive  bool
 	chStop    chan bool
 	callbacks map[string]func() *util.SafeChannel
@@ -56,10 +56,18 @@ func (slf *srSync) cleansing(exceptKey string) {
 	}
 }
 
-func (slf *srSync) Register(key string, callback func() *util.SafeChannel) string {
-	slf.mutex.Lock()
-	defer slf.mutex.Unlock()
+func (slf *srSync) Register(timeout time.Duration, key string, callback func() *util.SafeChannel) (id string, executed bool, panicErr error) {
+	// slf.mtx.Lock()
+	// defer slf.mtx.Unlock()
 
+	executed, panicErr = slf.mtx.Exec(&timeout, func() {
+		id = slf.register(key, callback)
+	})
+
+	return
+}
+
+func (slf *srSync) register(key string, callback func() *util.SafeChannel) string {
 	util.Printf("register start, key: %v\n", key)
 	defer util.Printf("register end, key: %v\n", key)
 
@@ -87,7 +95,7 @@ func (slf *srSync) Register(key string, callback func() *util.SafeChannel) strin
 	if !ok {
 		pool = &srPool{
 			key: key,
-			mtx: &sync.RWMutex{},
+			mtx: p9.Util.NewMutex(),
 			callbacks: map[string]func() *util.SafeChannel{
 				id: callback,
 			},
@@ -99,10 +107,9 @@ func (slf *srSync) Register(key string, callback func() *util.SafeChannel) strin
 		util.Printf("register run: %v\n", id)
 		go pool.runner()
 	} else {
-		pool.mtx.Lock()
-		defer pool.mtx.Unlock()
-
-		pool.callbacks[id] = callback
+		pool.mtx.Exec(nil, func() {
+			pool.callbacks[id] = callback
+		})
 	}
 
 	return id
@@ -133,23 +140,25 @@ func (slf *srPool) runner() {
 func (slf *srPool) run() {
 	ls := make(map[string]func() *util.SafeChannel, 0)
 
-	slf.mtx.RLock()
-	for k, v := range slf.callbacks {
-		ls[k] = v
-	}
-	slf.mtx.RUnlock()
+	slf.mtx.Exec(nil, func() {
+		for k, v := range slf.callbacks {
+			ls[k] = v
+		}
+	})
 
 	ids := make([]string, 0)
 
 	for id, callback := range ls {
 		util.Printf("- run(): call callback [%v]\n", id)
 		chStatus := callback()
+
 		if chStatus == nil {
 			ids = append(ids, id)
 		} else {
 			util.Printf("- run(): wait chStatus [%v]\n", id)
-			status := chStatus.Read("done")
+			status := chStatus.Read(Env.StreamCallbackTimeoutSecond, "done")
 			util.Printf("- run(): status %v [%v]\n", status, id)
+
 			if status == "done" {
 				ids = append(ids, id)
 				chStatus.Close()
@@ -159,14 +168,12 @@ func (slf *srPool) run() {
 	}
 
 	if len(ids) > 0 {
-		slf.mtx.Lock()
-		defer slf.mtx.Unlock()
-
-		for _, id := range ids {
-			delete(slf.callbacks, id)
-		}
+		slf.mtx.Exec(nil, func() {
+			for _, id := range ids {
+				delete(slf.callbacks, id)
+			}
+		})
 	}
-
 }
 
 func (slf *srSync) check() {

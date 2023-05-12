@@ -9,6 +9,7 @@
 package ssync
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -39,15 +40,6 @@ func (*SyncService) notFound(req *sync_svc.KeyLockRequest, id string) *sync_svc.
 		Channel: req.Channel,
 		Key:     req.Key,
 		Code:    "not-found",
-		Message: id,
-	}
-}
-
-func (*SyncService) waiting(req *sync_svc.KeyLockRequest, id string) *sync_svc.KeyLockResponse {
-	return &sync_svc.KeyLockResponse{
-		Channel: req.Channel,
-		Key:     req.Key,
-		Code:    "waiting",
 		Message: id,
 	}
 }
@@ -117,24 +109,40 @@ func (slf *SyncService) keyLock(stream sync_svc.SyncService_KeyLockServer) error
 
 		case req.Action == "done" && kl.chStatus != nil:
 			util.Printf("KeyLock [%v]: kl.chStatus done\n", kl.id)
-			kl.done()
+			kl.stop()
 
 		case req.Action == "register":
-			kl.id = kl.sync.Register(req.Key, func() *util.SafeChannel {
+			id, executed, panicErr := kl.sync.Register(app.Env.RegisterTimeoutSecond, req.Key, func() *util.SafeChannel {
+				defer func() {
+					if r := recover(); r != nil {
+						util.Printf("recover from panic on callback func, err: %+v", r)
+					}
+				}()
+
 				if kl.isRunning {
 					util.Printf("KeyLock [%v]: send execute\n", kl.id)
 					kl.errCallback = stream.Send(slf.execute(req, kl.id))
 					util.Printf("KeyLock [%v]: sended execute, isErr: %v", kl.id, kl.errCallback != nil)
 					ch := make(chan string)
-					chStatus := &util.SafeChannel{
-						CH: &ch,
-					}
+					chStatus := util.NewSafeChannel(&ch)
 					kl.chStatus = chStatus
 					return kl.chStatus
 				}
 
 				return nil
 			})
+
+			if panicErr != nil {
+				kl.stop()
+				return panicErr
+			}
+
+			if !executed {
+				kl.stop()
+				return errors.New("not executed")
+			}
+
+			kl.id = id
 			util.Printf("KeyLog register id: %v\n", kl.id)
 
 		default:
@@ -145,10 +153,6 @@ func (slf *SyncService) keyLock(stream sync_svc.SyncService_KeyLockServer) error
 
 func (slf *srKeyLock) stop() {
 	slf.isRunning = false
-	slf.done()
-}
-
-func (slf *srKeyLock) done() {
 	chStatus := slf.chStatus
 	slf.chStatus = nil
 	if chStatus != nil {

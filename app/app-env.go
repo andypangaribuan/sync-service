@@ -28,9 +28,11 @@ type srEnv struct {
 	Channels            []string
 	MutexSizePerChannel int
 
-	PrintLog        bool
-	RunnerIteration int
-	PoolCheckDelay  time.Duration
+	PrintLog                    bool
+	RunnerIteration             int
+	PoolCheckDelay              time.Duration
+	RegisterTimeoutSecond       time.Duration
+	StreamCallbackTimeoutSecond time.Duration
 }
 
 func envInitialize() {
@@ -51,8 +53,10 @@ func envInitialize() {
 		Channels:            strings.Split(p9.Util.Env.GetStr("CHANNELS"), ","),
 		MutexSizePerChannel: p9.Util.Env.GetInt("MUTEX_SIZE_PER_CHANNEL"),
 
-		PrintLog:        p9.Util.Env.GetBool("PRINT_LOG", false),
-		RunnerIteration: p9.Util.Env.GetInt("RUNNER_ITERATION", 100),
-		PoolCheckDelay:  time.Second * time.Duration(poolCheckDelay),
+		PrintLog:                    p9.Util.Env.GetBool("PRINT_LOG", false),
+		RunnerIteration:             p9.Util.Env.GetInt("RUNNER_ITERATION", 100),
+		PoolCheckDelay:              time.Second * time.Duration(poolCheckDelay),
+		RegisterTimeoutSecond:       time.Second * time.Duration(p9.Util.Env.GetInt64("REGISTER_TIMEOUT_SECOND")),
+		StreamCallbackTimeoutSecond: time.Second * time.Duration(p9.Util.Env.GetInt64("STREAM_CALLBACK_TIMEOUT_SECOND")),
 	}
 }

@@ -9,11 +9,11 @@
 package app
 
 import (
-	"sync"
 	"sync-service/abs"
 
 	"github.com/andypangaribuan/project9"
 	"github.com/andypangaribuan/project9/f9"
+	"github.com/andypangaribuan/project9/p9"
 )
 
 var (
@@ -31,7 +31,7 @@ func init() {
 		channel := Env.Channels[i]
 		syncChannels[channel] = &srSync{
 			channel: channel,
-			mutex:   sync.Mutex{},
+			mtx:     p9.Util.NewMutex(),
 			pools:   make(map[string]*srPool, 0),
 		}
 
