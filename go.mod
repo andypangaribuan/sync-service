@@ -3,7 +3,7 @@ module sync-service
 go 1.20
 
 require (
-	github.com/andypangaribuan/project9 v1.1.42
+	github.com/andypangaribuan/project9 v1.1.43
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 )
