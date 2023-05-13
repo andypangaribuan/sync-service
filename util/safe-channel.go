@@ -24,10 +24,10 @@ type SafeChannel struct {
 	mtx    abs.UtilMutex
 }
 
-func NewSafeChannel(ch *chan string) *SafeChannel {
+func NewSafeChannel(name string, ch *chan string) *SafeChannel {
 	return &SafeChannel{
 		ch:  ch,
-		mtx: p9.Util.NewMutex(),
+		mtx: p9.Util.NewMutex(name),
 	}
 }
 

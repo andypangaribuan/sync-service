@@ -10,6 +10,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"sync-service/util"
 	"time"
 
@@ -68,24 +69,40 @@ func (slf *srSync) Register(timeout time.Duration, key string, callback func() *
 }
 
 func (slf *srSync) register(key string, callback func() *util.SafeChannel) string {
-	util.Printf("register start, key: %v\n", key)
-	defer util.Printf("register end, key: %v\n", key)
+	log.Printf("register start, key: %v\n", key)
+	defer log.Printf("register end, key: %v\n", key)
 
+	// log.Printf("do cleansing, key: %v\n", key)
 	slf.cleansing(key)
 	iteration := 0
+	const maxIteration = 10
 
+	// log.Printf("do iteration, key: %v\n", key)
 	for {
 		iteration++
 		length := len(slf.pools)
 
-		if length >= Env.MutexSizePerChannel {
+		switch {
+		case length >= Env.MutexSizePerChannel && iteration < maxIteration:
 			time.Sleep(time.Millisecond * 10)
-		} else if iteration >= 30 {
+
+		case iteration >= maxIteration:
 			iteration = 0
 			slf.cleansing(key)
-		} else {
+		}
+
+		if length < Env.MutexSizePerChannel {
 			break
 		}
+
+		// if length >= Env.MutexSizePerChannel {
+		// 	time.Sleep(time.Millisecond * 10)
+		// } else if iteration >= 30 {
+		// 	iteration = 0
+		// 	slf.cleansing(key)
+		// } else {
+		// 	break
+		// }
 	}
 
 	id := slf.generateId()
@@ -95,7 +112,7 @@ func (slf *srSync) register(key string, callback func() *util.SafeChannel) strin
 	if !ok {
 		pool = &srPool{
 			key: key,
-			mtx: p9.Util.NewMutex(),
+			mtx: p9.Util.NewMutex(fmt.Sprintf("pool: %v", key)),
 			callbacks: map[string]func() *util.SafeChannel{
 				id: callback,
 			},
@@ -107,9 +124,11 @@ func (slf *srSync) register(key string, callback func() *util.SafeChannel) strin
 		util.Printf("register run: %v\n", id)
 		go pool.runner()
 	} else {
+		log.Printf("add to pool, key: %v, id: %v\n", key, id)
 		pool.mtx.Exec(nil, func() {
 			pool.callbacks[id] = callback
 		})
+		log.Printf("end to pool, key: %v, id: %v\n", key, id)
 	}
 
 	return id

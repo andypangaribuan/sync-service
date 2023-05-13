@@ -124,7 +124,7 @@ func (slf *SyncService) keyLock(stream sync_svc.SyncService_KeyLockServer) error
 					kl.errCallback = stream.Send(slf.execute(req, kl.id))
 					util.Printf("KeyLock [%v]: sended execute, isErr: %v", kl.id, kl.errCallback != nil)
 					ch := make(chan string)
-					chStatus := util.NewSafeChannel(&ch)
+					chStatus := util.NewSafeChannel(fmt.Sprintf("keylock-register: %v", kl.id), &ch)
 					kl.chStatus = chStatus
 					return kl.chStatus
 				}

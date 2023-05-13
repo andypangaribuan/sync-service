@@ -3,7 +3,7 @@ module sync-service
 go 1.20
 
 require (
-	github.com/andypangaribuan/project9 v1.1.43
+	github.com/andypangaribuan/project9 v1.1.44
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -29,7 +29,9 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.40.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	github.com/viney-shih/go-lock v1.1.2 // indirect
 	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230209215440-0dfe4f8abfcc // indirect
