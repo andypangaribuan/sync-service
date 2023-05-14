@@ -30,6 +30,7 @@ type srEnv struct {
 
 	PrintLog                    bool
 	RunnerIteration             int
+	AutoCleanPoolDelaySecond    time.Duration
 	PoolCheckDelay              time.Duration
 	RegisterTimeoutSecond       time.Duration
 	StreamCallbackTimeoutSecond time.Duration
@@ -55,6 +56,7 @@ func envInitialize() {
 
 		PrintLog:                    p9.Util.Env.GetBool("PRINT_LOG", false),
 		RunnerIteration:             p9.Util.Env.GetInt("RUNNER_ITERATION", 100),
+		AutoCleanPoolDelaySecond:    time.Second * time.Duration(p9.Util.Env.GetInt64("AUTO_CLEAN_POOL_DELAY_SECOND")),
 		PoolCheckDelay:              time.Second * time.Duration(poolCheckDelay),
 		RegisterTimeoutSecond:       time.Second * time.Duration(p9.Util.Env.GetInt64("REGISTER_TIMEOUT_SECOND")),
 		StreamCallbackTimeoutSecond: time.Second * time.Duration(p9.Util.Env.GetInt64("STREAM_CALLBACK_TIMEOUT_SECOND")),

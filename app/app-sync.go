@@ -195,6 +195,16 @@ func (slf *srPool) run() {
 	}
 }
 
+func (slf *srSync) autoClean() {
+	for {
+		time.Sleep(Env.AutoCleanPoolDelaySecond)
+
+		slf.mtx.Exec(&Env.AutoCleanPoolDelaySecond, func() {
+			slf.cleansing("")
+		})
+	}
+}
+
 func (slf *srSync) check() {
 	for {
 		time.Sleep(Env.PoolCheckDelay)
@@ -210,16 +220,16 @@ func (slf *srSync) check() {
 			}
 
 			if v == nil {
-				msg += fmt.Sprintf("%v. %v: [NIL]", i, k)
+				msg += fmt.Sprintf("%v. [%v] %v: [NIL]", i, slf.channel, k)
 			} else {
-				msg += fmt.Sprintf("%v. %v: %v", i, k, len(v.callbacks))
+				msg += fmt.Sprintf("%v. [%v] %v: %v", i, slf.channel, k, len(v.callbacks))
 			}
 		}
 
 		if msg == "" {
-			util.Printf("total pool: %v\n", totalPool)
+			util.Printf("total pool [%v]: %v\n", slf.channel, totalPool)
 		} else {
-			util.Printf("total pool: %v\n%v\n", totalPool, msg)
+			util.Printf("total pool [%v]: %v\n%v\n", slf.channel, totalPool, msg)
 		}
 	}
 }

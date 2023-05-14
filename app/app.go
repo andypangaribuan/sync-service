@@ -30,13 +30,15 @@ func init() {
 	syncChannels = make(map[string]*srSync, 0)
 	for i := 0; i < len(Env.Channels); i++ {
 		channel := Env.Channels[i]
-		syncChannels[channel] = &srSync{
+		sc := &srSync{
 			channel: channel,
 			mtx:     p9.Util.NewMutex(fmt.Sprintf("channel: %v", channel)),
 			pools:   make(map[string]*srPool, 0),
 		}
 
-		go syncChannels[channel].check()
+		syncChannels[channel] = sc
+		go sc.check()
+		go sc.autoClean()
 	}
 
 	f9.TimeZone = Env.Timezone

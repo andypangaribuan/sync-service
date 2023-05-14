@@ -7,7 +7,6 @@
 package main
 
 import (
-	"log"
 	"sync-service/app"
 	"sync-service/ctrl"
 	"sync-service/files/proto/sync_svc"
@@ -18,7 +17,6 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	withErr := !app.Env.AppEnv.IsProd() && !app.Env.AppEnv.IsSandbox()
 	util.PrintLog = app.Env.PrintLog
 	server.Fuse2(app.Env.AppPortRestful, app.Env.AppPortGRPC, app.Env.AppAutoRecover, withErr, routes, register)
