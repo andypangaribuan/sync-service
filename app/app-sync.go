@@ -69,8 +69,8 @@ func (slf *srSync) Register(timeout time.Duration, key string, callback func() *
 }
 
 func (slf *srSync) register(key string, callback func() *util.SafeChannel) string {
-	log.Printf("register start, key: %v\n", key)
-	defer log.Printf("register end, key: %v\n", key)
+	util.Printf("register start, key: %v\n", key)
+	defer util.Printf("register end, key: %v\n", key)
 
 	// log.Printf("do cleansing, key: %v\n", key)
 	slf.cleansing(key)
